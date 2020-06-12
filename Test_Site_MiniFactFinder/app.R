@@ -4,6 +4,8 @@ library(janitor)
 library(tidyverse)
 library(formattable)
 
+options(shiny.maxRequestSize=100*1024^2)
+
 # Define UI for data upload app ----
 ui <- fluidPage(
     
@@ -15,7 +17,7 @@ ui <- fluidPage(
         
         # Sidebar panel for inputs ----
         sidebarPanel(
-            
+
             # Input: Select a file ----
             fileInput(
                 "eeo_file", 
@@ -26,24 +28,28 @@ ui <- fluidPage(
                            ".csv")
             ),
             
+            # select occupation
             selectInput(
                 "occupation", 
                 "Occupation (empty until file selected)",
                 c()
             ),
             
+            # select geography
             selectInput(
                 "geo", 
                 "Geography (empty until file selected)",
                 c()
             ),
             
+            # select estimate or margin of error
             radioButtons(
                 "est_mar", 
                 "Table type",
                 c("Estimate", "Margin of Error")
             ),
             
+            # select number or percentage
             radioButtons(
                 "num_per", 
                 "Data type",
@@ -82,12 +88,32 @@ server <- function(input, output, session) {
         
         x <- raw_data
         
+        
+        # set the columns to pivot on based on table name
+        
+        if (grepl("1R", input$eeo_file$name, fixed = TRUE)){
+            pivot_cols <- c("Id", 
+                                 "Id2", 
+                                 "Geography", 
+                                 "Occupation Code"
+            )
+        } else if (grepl("1W", input$eeo_file$name, fixed = TRUE)){
+             pivot_cols <- c("Id", 
+                                 "Id2", 
+                                 "Geography", 
+                                 "Occupation Code",
+                                 "Residence to Work Place Flows"
+            )
+        } else{
+            pivot_cols <- c()
+        }
+        
         # pivot columns from wide to narrow
         
         x <- x %>%
             pivot_longer(
                 # don't include these columns
-                -c("Id", "Id2", "Geography", "Occupation Code"),
+                -pivot_cols,
                 
                 # set the new pivoted cols to statistic_name
                 names_to = "statistic_name",
@@ -459,7 +485,7 @@ server <- function(input, output, session) {
                 "NHPI and Asian\n(Hawaii only)",
                 "NHPI and Asian and\nWhite (Hawaii only)",
                 
-                'Kentucky','','','','','','','','','','','','','','','',
+                geo,'','','','','','','','','','','','','','','',
                 occupation,'','','','','','','','','','','','','','','',
                 
                 'Total, both sexes','','','','','','','','','','','','','','','',
